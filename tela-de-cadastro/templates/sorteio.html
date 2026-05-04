@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grande Ganhador!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&family=Lato:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gold:        #e8c050;
+      --gold-light:  #f7e08a;
+      --gold-dark:   #a8872a;
+      --bg-deep:     #0a0812;
+      --bg-card:     #110f1e;
+      --roller-bg:   #07050f;
+      --text-light:  #f0e8d0;
+      --text-muted:  #8a7f9a;
+      --purple:      #6c3fbf;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-deep);
+      font-family: 'Lato', sans-serif;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* Stars */
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .star {
+      position: absolute; border-radius: 50%; background: #fff;
+      animation: twinkle var(--dur,3s) ease-in-out infinite;
+      animation-delay: var(--delay,0s);
+    }
+    @keyframes twinkle {
+      0%,100% { opacity:.08; transform:scale(1); }
+      50%      { opacity:.55; transform:scale(1.4); }
+    }
+
+    #confetti-canvas { position:fixed; inset:0; pointer-events:none; z-index:999; }
+
+    /* Card */
+    .card {
+      position: relative; z-index: 10;
+      width: min(640px, 95vw);
+      background: var(--bg-card);
+      border-radius: 28px;
+      padding: 48px 40px 40px;
+      border: 1px solid rgba(232,192,80,.28);
+      box-shadow: 0 0 0 1px rgba(232,192,80,.06), 0 40px 80px rgba(0,0,0,.7), 0 0 50px rgba(232,192,80,.18);
+      text-align: center;
+      margin: 28px auto;
+    }
+    .card::before {
+      content:''; position:absolute; inset:0; border-radius:28px; padding:1px;
+      background: linear-gradient(135deg,rgba(232,192,80,.5),transparent 40%,rgba(232,192,80,.18) 60%,transparent);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude; pointer-events:none;
+    }
+
+    .trophy-row { font-size: 2.2rem; letter-spacing: 8px; margin-bottom: 14px; }
+
+    h1 {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(1.3rem,5vw,1.9rem);
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-shadow: 0 0 30px rgba(232,192,80,.4);
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-family: 'Cinzel', serif;
+      font-size: .75rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+
+    /* Slot Machine */
+    .machine-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .machine-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 10px;
+      background: linear-gradient(180deg, #1e1a34, #110f1e);
+      border: 1px solid rgba(232,192,80,.2);
+    }
+    .machine-side.left  { border-radius: 14px 0 0 14px; }
+    .machine-side.right { border-radius: 0 14px 14px 0; }
+
+    .machine-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--gold-dark);
+      box-shadow: 0 0 6px var(--gold-dark);
+    }
+    .machine-dot.lit {
+      background: var(--gold);
+      box-shadow: 0 0 12px var(--gold), 0 0 4px #fff;
+      animation: blink-dot 1.1s ease-in-out infinite alternate;
+    }
+    @keyframes blink-dot { from{opacity:.4} to{opacity:1} }
+
+    .reel-panel {
+      background: var(--roller-bg);
+      border-top: 2px solid var(--gold-dark);
+      border-bottom: 2px solid var(--gold-dark);
+      padding: 0 8px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Top/bottom fades */
+    .reel-panel::before,
+    .reel-panel::after {
+      content:''; position:absolute; left:0; right:0; height:60px; z-index:5; pointer-events:none;
+    }
+    .reel-panel::before { top:0;    background: linear-gradient(to bottom, var(--roller-bg) 0%, transparent 100%); }
+    .reel-panel::after  { bottom:0; background: linear-gradient(to top,   var(--roller-bg) 0%, transparent 100%); }
+
+    /* Center highlight window */
+    .reel-window {
+      position: absolute; top:50%; left:8px; right:8px;
+      height: 76px; transform: translateY(-50%);
+      border-top: 2px solid rgba(232,192,80,.6);
+      border-bottom: 2px solid rgba(232,192,80,.6);
+      background: linear-gradient(to bottom, rgba(232,192,80,.04), rgba(232,192,80,.12), rgba(232,192,80,.04));
+      z-index:4; pointer-events:none;
+    }
+
+    .reel-sep {
+      font-size: 28px; font-weight: 900;
+      color: var(--gold-dark);
+      z-index: 6; position: relative;
+      flex-shrink: 0; line-height: 1;
+    }
+
+    .digit-col {
+      width: 64px;
+      height: 76px;
+      overflow: hidden;
+      position: relative;
+      z-index: 6;
+    }
+
+    /* Per-reel flash overlay */
+    .reel-flash {
+      position: absolute; inset: 0; z-index: 9;
+      background: rgba(248,220,120,.5);
+      opacity: 0; pointer-events: none;
+    }
+
+    .digit-strip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      will-change: transform;
+    }
+
+    .digit-item {
+      height: 76px;
+      line-height: 76px;
+      font-size: 54px;
+      font-weight: 900;
+      font-family: 'Cinzel Decorative', serif;
+      color: var(--gold);
+      text-shadow: 0 0 10px rgba(232,192,80,.9), 0 0 28px rgba(232,192,80,.4);
+      flex-shrink: 0;
+      width: 100%;
+      text-align: center;
+      user-select: none;
+    }
+
+    /* Glow pulse while rolling */
+    .reel-panel.spinning {
+      animation: panel-glow .75s ease-in-out infinite alternate;
+    }
+    @keyframes panel-glow {
+      from { box-shadow: none; }
+      to   { box-shadow: 0 0 50px rgba(232,192,80,.3), 0 0 100px rgba(108,63,191,.2); }
+    }
+
+    /* Result */
+    .result-area {
+      min-height: 68px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; margin-top: 24px;
+    }
+    .status-text {
+      font-family: 'Cinzel', serif; font-size: .8rem;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .winner-name {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(1.1rem,4vw,1.5rem);
+      color: var(--gold-light);
+      text-shadow: 0 0 28px rgba(232,192,80,.5);
+      opacity: 0; transform: translateY(8px) scale(.95);
+      transition: opacity .6s ease, transform .6s ease;
+      margin-top: 8px;
+    }
+    .winner-name.visible { opacity:1; transform:translateY(0) scale(1); }
+
+    /* Divider */
+    .divider { display:flex; align-items:center; gap:12px; margin:28px 0; }
+    .divider::before,.divider::after {
+      content:''; flex:1; height:1px;
+      background: linear-gradient(to right, transparent, rgba(232,192,80,.35), transparent);
+    }
+    .divider-diamond { width:8px; height:8px; background:var(--gold); transform:rotate(45deg); flex-shrink:0; }
+
+    /* Buttons */
+    .btn-group { display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:28px; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-dark));
+      background-size: 200% 200%;
+      animation: shimmer-btn 3s linear infinite;
+      color: #0a0812;
+      font-family: 'Cinzel', serif; font-size:.9rem;
+      font-weight:700; letter-spacing:3px; text-transform:uppercase;
+      border:none; border-radius:50px; padding:14px 52px;
+      cursor:pointer;
+      box-shadow: 0 4px 24px rgba(232,192,80,.35), 0 0 0 1px rgba(232,192,80,.3);
+      transition: transform .15s, box-shadow .3s;
+    }
+    @keyframes shimmer-btn {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    .btn-primary:hover:not(:disabled)  { transform:translateY(-2px); box-shadow:0 8px 32px rgba(232,192,80,.5); }
+    .btn-primary:active:not(:disabled) { transform:scale(.97); }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; animation:none; }
+
+    .btn-secondary {
+      background:transparent; color:var(--text-muted);
+      font-family:'Cinzel',serif; font-size:.75rem;
+      letter-spacing:2px; text-transform:uppercase;
+      border:1px solid rgba(232,192,80,.15); border-radius:50px;
+      padding:10px 32px; cursor:pointer; transition:all .2s;
+    }
+    .btn-secondary:hover:not(:disabled) { border-color:rgba(232,192,80,.4); color:var(--gold); }
+    .btn-secondary:disabled { opacity:.3; cursor:not-allowed; }
+
+    .btn-link {
+      background:none; border:none; color:var(--text-muted);
+      font-family:'Lato',sans-serif; font-size:.8rem;
+      cursor:pointer; margin-top:4px;
+      text-decoration:underline; text-underline-offset:3px; transition:color .2s;
+    }
+    .btn-link:hover { color:var(--gold); }
+
+    @keyframes shake {
+      0%,100% { transform:translateX(0); }
+      20%,60% { transform:translateX(-5px); }
+      40%,80% { transform:translateX(5px); }
+    }
+    .shake { animation: shake .2s ease-in-out; }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<canvas id="confetti-canvas"></canvas>
+
+<div class="card" id="main-card">
+  <div class="trophy-row">🏆</div>
+  <h1>Grande Ganhador</h1>
+  <p class="subtitle">Sorteio Oficial</p>
+
+  <div class="machine-wrap">
+    <div class="machine-side left">
+      <div class="machine-dot lit"></div>
+      <div class="machine-dot"></div>
+      <div class="machine-dot lit"></div>
+      <div class="machine-dot"></div>
+      <div class="machine-dot lit"></div>
+    </div>
+
+    <div class="reel-panel" id="reel-panel">
+      <div class="reel-window"></div>
+    </div>
+
+    <div class="machine-side right">
+      <div class="machine-dot lit"></div>
+      <div class="machine-dot"></div>
+      <div class="machine-dot lit"></div>
+      <div class="machine-dot"></div>
+      <div class="machine-dot lit"></div>
+    </div>
+  </div>
+
+  <div class="result-area">
+    <p class="status-text" id="status-text">Pronto para sortear</p>
+    <p class="winner-name" id="winner-name"></p>
+  </div>
+
+  <div class="divider"><div class="divider-diamond"></div></div>
+
+  <div class="btn-group">
+    <button class="btn-primary" id="btn-sortear" onclick="iniciarSorteio()">✦ Sortear ✦</button>
+    <button class="btn-secondary" id="btn-reset" onclick="reiniciarSorteio()">Sortear novamente</button>
+    <button class="btn-link" onclick="location.href='/'">← Voltar ao Início</button>
+  </div>
+</div>
+
+<script>
+// ── Stars ──────────────────────────────────────────────
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 130; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const sz = Math.random() * 2.5 + 0.4;
+  s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--delay:${Math.random()*5}s;`;
+  starsEl.appendChild(s);
+}
+
+// ── Config ─────────────────────────────────────────────
+const DIGITS      = 3;
+const ITEM_H      = 76;          // px per digit
+const REPS        = 40;          // repetitions of 0–9 in the strip
+const STRIP_CYCLE = 10 * ITEM_H; // 760px per cycle
+const FULL_H      = REPS * STRIP_CYCLE;
+
+const SPIN_FULL_MS = 2400;   // ms all reels spin at top speed
+const STOP_DELAY   = 850;    // ms between each reel stopping
+const STOP_DUR     = 820;    // ms for deceleration + land
+
+// ── Reel objects ───────────────────────────────────────
+const reels = [];
+let rolling = false;
+let rafId   = null;
+
+const panel = document.getElementById('reel-panel');
+
+for (let d = 0; d < DIGITS; d++) {
+  if (d > 0) {
+    const sep = document.createElement('div');
+    sep.className = 'reel-sep';
+    sep.textContent = '·';
+    panel.appendChild(sep);
+  }
+
+  const col   = document.createElement('div');
+  col.className = 'digit-col';
+
+  const strip = document.createElement('div');
+  strip.className = 'digit-strip';
+
+  // 40 repetitions of digits 0–9
+  for (let r = 0; r < REPS; r++) {
+    for (let n = 0; n <= 9; n++) {
+      const item = document.createElement('div');
+      item.className = 'digit-item';
+      item.textContent = n;
+      strip.appendChild(item);
+    }
+  }
+
+  const flash = document.createElement('div');
+  flash.className = 'reel-flash';
+
+  col.appendChild(strip);
+  col.appendChild(flash);
+  panel.appendChild(col);
+
+  reels.push({
+    strip, flashEl: flash,
+    absPos:        0,   // absolute position (keeps going up)
+    velocity:      0,   // px per frame
+    phase:         'idle',
+    stopStartTime: 0,
+    stopStartAbsPos: 0,
+    targetAbsPos:  0,
+  });
+}
+
+resetToZero();
+
+// ── Helpers ────────────────────────────────────────────
+function resetToZero() {
+  reels.forEach(r => {
+    r.absPos = 0;
+    r.phase  = 'idle';
+    applyStrip(r, 0);
+  });
+}
+
+function applyStrip(reel, absPos) {
+  // Wrap visually so we don't need an infinite DOM
+  const visual = absPos % FULL_H;
+  reel.strip.style.transform = `translateY(-${visual}px)`;
+}
+
+// Easing: ease-out with a tiny overshoot bounce
+function easeOutOvershoot(t) {
+  // Cubic ease-out base
+  const base = 1 - Math.pow(1 - t, 3);
+  // Add a damped oscillation that creates overshoot only near the end
+  const overshoot = Math.exp(-t * 9) * Math.sin(t * Math.PI * 3) * 0.06;
+  return base + overshoot;
+}
+
+// ── RAF loop ───────────────────────────────────────────
+let prevTime = null;
+
+function tick(now) {
+  if (!rolling) return;
+  const dt = prevTime ? Math.min(now - prevTime, 50) : 16.67;
+  prevTime = now;
+
+  let allDone = true;
+
+  reels.forEach(reel => {
+    if (reel.phase === 'spinning') {
+      allDone = false;
+      reel.absPos += reel.velocity * (dt / 16.67);
+      applyStrip(reel, reel.absPos);
+
+    } else if (reel.phase === 'stopping') {
+      allDone = false;
+      const elapsed  = now - reel.stopStartTime;
+      const progress = Math.min(elapsed / STOP_DUR, 1);
+      const eased    = easeOutOvershoot(progress);
+      const pos      = reel.stopStartAbsPos + (reel.targetAbsPos - reel.stopStartAbsPos) * eased;
+
+      applyStrip(reel, pos);
+
+      if (progress >= 1) {
+        reel.absPos = reel.targetAbsPos;
+        applyStrip(reel, reel.absPos);
+        reel.phase = 'stopped';
+        onReelStopped(reels.indexOf(reel));
+      }
+    } else if (reel.phase === 'stopped') {
+      // keep it still
+    } else {
+      allDone = false; // idle — shouldn't happen during rolling
+    }
+  });
+
+  if (!allDone || reels.some(r => r.phase !== 'stopped')) {
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+// ── Reel landed ────────────────────────────────────────
+function onReelStopped(idx) {
+  playClack();
+  triggerFlash(idx);
+  triggerShake();
+
+  if (reels.every(r => r.phase === 'stopped')) {
+    allReelsStopped();
+  }
+}
+
+function triggerFlash(idx) {
+  const fl = reels[idx].flashEl;
+  fl.style.opacity = '1';
+  fl.style.transition = 'none';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fl.style.transition = 'opacity .3s ease';
+      fl.style.opacity    = '0';
+    });
+  });
+}
+
+function triggerShake() {
+  const card = document.getElementById('main-card');
+  card.classList.remove('shake');
+  void card.offsetWidth;
+  card.classList.add('shake');
+}
+
+function allReelsStopped() {
+  rolling = false;
+  cancelAnimationFrame(rafId);
+  panel.classList.remove('spinning');
+
+  document.getElementById('btn-sortear').disabled = false;
+  document.getElementById('btn-reset').disabled   = false;
+
+  document.getElementById('status-text').textContent = '🎉 Ganhador';
+  const nameEl = document.getElementById('winner-name');
+  nameEl.textContent = window._winnerName || '—';
+  setTimeout(() => nameEl.classList.add('visible'), 80);
+
+  lançarConfete();
+}
+
+// ── Compute where reel should land (absolute coords) ───
+function computeTarget(reel, digit) {
+  // The digit D is visible when (absPos % STRIP_CYCLE) == D * ITEM_H
+  const targetInCycle = digit * ITEM_H;
+  const currentMod    = reel.absPos % STRIP_CYCLE;
+  let   diff          = (targetInCycle - currentMod + STRIP_CYCLE) % STRIP_CYCLE;
+
+  // Make sure we spin at least 2 more full cycles during the stop phase
+  // so the animation looks like it's still going when it starts decelerating
+  if (diff < STRIP_CYCLE * 2) diff += STRIP_CYCLE * Math.ceil((STRIP_CYCLE * 2 - diff) / STRIP_CYCLE);
+
+  return reel.absPos + diff;
+}
+
+// ── Sortear ────────────────────────────────────────────
+async function iniciarSorteio() {
+  if (rolling) return;
+  rolling  = true;
+  prevTime = null;
+
+  document.getElementById('btn-sortear').disabled = true;
+  document.getElementById('btn-reset').disabled   = true;
+
+  const nameEl = document.getElementById('winner-name');
+  nameEl.classList.remove('visible');
+  nameEl.textContent = '';
+  document.getElementById('status-text').textContent = 'Sorteando...';
+
+  panel.classList.add('spinning');
+  tocarSomSuspense();
+
+  // Each reel spins at slightly different speed (right ones a bit faster)
+  const BASE_VEL = 30; // px per frame @ 60fps
+  reels.forEach((reel, i) => {
+    reel.phase    = 'spinning';
+    reel.velocity = BASE_VEL * (1 + i * 0.07);
+  });
+
+  rafId = requestAnimationFrame(tick);
+
+  // Fetch winner
+  const res  = await fetch('/api/sortear');
+  const data = await res.json();
+  window._winnerName = `${data.primeiro_nome} ${data.sobrenome}`;
+
+  const padded = String(data.id).padStart(DIGITS, '0');
+
+  // Stop reels one by one, left → right
+  reels.forEach((reel, idx) => {
+    setTimeout(() => {
+      if (!rolling) return;
+      const digit        = parseInt(padded[idx]);
+      reel.targetAbsPos  = computeTarget(reel, digit);
+      reel.stopStartAbsPos = reel.absPos;
+      reel.stopStartTime = performance.now();
+      reel.phase         = 'stopping';
+    }, SPIN_FULL_MS + idx * STOP_DELAY);
+  });
+}
+
+// ── Reset ──────────────────────────────────────────────
+function reiniciarSorteio() {
+  rolling = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  panel.classList.remove('spinning');
+
+  document.getElementById('winner-name').classList.remove('visible');
+  document.getElementById('winner-name').textContent = '';
+  document.getElementById('status-text').textContent  = 'Pronto para sortear';
+  document.getElementById('btn-sortear').disabled     = false;
+  document.getElementById('btn-reset').disabled       = false;
+
+  resetToZero();
+}
+
+// ── Audio ──────────────────────────────────────────────
+let audioCtx;
+function ctx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function tocarSomSuspense() {
+  try {
+    const c      = ctx();
+    const total  = SPIN_FULL_MS + DIGITS * STOP_DELAY + STOP_DUR;
+    const ticks  = Math.floor(total / 48);
+    for (let i = 0; i < ticks; i++) playTick(c, c.currentTime + i * 0.048, 0.15);
+  } catch(e) {}
+}
+
+function playClack() {
+  try { playTick(ctx(), ctx().currentTime, 0.45, 0.045); } catch(e) {}
+}
+
+function playTick(c, t, vol = 0.15, dur = 0.018) {
+  const sr  = c.sampleRate;
+  const len = Math.floor(sr * dur);
+  const buf = c.createBuffer(1, len, sr);
+  const d   = buf.getChannelData(0);
+  for (let i = 0; i < len; i++)
+    d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 5);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const g = c.createGain();
+  g.gain.setValueAtTime(vol, t);
+  src.connect(g); g.connect(c.destination);
+  src.start(t);
+}
+
+// ── Confetti ────────────────────────────────────────────
+function lançarConfete() {
+  const canvas = document.getElementById('confetti-canvas');
+  const W = canvas.width  = window.innerWidth;
+  const H = canvas.height = window.innerHeight;
+  const c = canvas.getContext('2d');
+  const colors = ['#e8c050','#f7e08a','#a8872a','#ffffff','#6c3fbf','#c084fc','#fff59d'];
+
+  const ps = Array.from({ length: 200 }, () => ({
+    x:     W / 2 + (Math.random() - .5) * 450,
+    y:     H  * .4 + (Math.random() - .5) * 100,
+    vx:    (Math.random() - .5) * 18,
+    vy:    -(Math.random() * 18 + 6),
+    size:  Math.random() * 9 + 4,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    rot:   Math.random() * 360,
+    spin:  (Math.random() - .5) * 14,
+    shape: Math.random() > .5 ? 'rect' : 'circ',
+    life:  1,
+  }));
+
+  let frame = 0;
+  function draw() {
+    c.clearRect(0, 0, W, H);
+    let alive = 0;
+    for (const p of ps) {
+      p.vy += .4; p.vx *= .99;
+      p.x += p.vx; p.y += p.vy; p.rot += p.spin; p.life -= .007;
+      if (p.life <= 0 || p.y > H + 20) continue;
+      alive++;
+      c.save();
+      c.globalAlpha = Math.min(p.life, 1);
+      c.translate(p.x, p.y);
+      c.rotate(p.rot * Math.PI / 180);
+      c.fillStyle = p.color;
+      if (p.shape === 'rect') c.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
+      else { c.beginPath(); c.arc(0, 0, p.size/2, 0, Math.PI*2); c.fill(); }
+      c.restore();
+    }
+    if (alive && frame++ < 400) requestAnimationFrame(draw);
+    else c.clearRect(0, 0, W, H);
+  }
+  draw();
+}
+</script>
+</body>
+</html>
